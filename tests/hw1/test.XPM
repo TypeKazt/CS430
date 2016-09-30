@@ -1,0 +1,18 @@
+/*XPM*/
+static char *sco100[] = {
+/* width height num_colors chars_per_pixel */
+"7 7 4 1",
+/* colors */
+"- c #ffffff",
+"# c #ffe0e0",
+"a c #ffb7b7",
+"X c #010101",
+/*pixels*/
+"X-###--",
+"-##a##-",
+"##aaa##",
+"##aaa##",
+"##aaa##",
+"-##a##-",
+"--###--"
+};
