@@ -1,4 +1,5 @@
 from colors import *
+from numpy import inf
 
 
 class Shape(object):
@@ -30,7 +31,11 @@ class Line(Shape):
         self.y_1 = y_1
         self.x_2 = x_2
         self.y_2 = y_2
-        self.slope = (float(y_2-y_1) / float(x_2-x_1))
+        self.slope = 0
+        if x_2 == x_1:
+            self.slope = inf
+        else:
+            self.slope = (float(y_2-y_1) / float(x_2-x_1))
 
     def __str__(self):
         return "Line: %d %d %d %d" % (self.x_1, self.y_1, self.x_2, self.y_2)
@@ -56,24 +61,44 @@ class Line(Shape):
             pass
 
     def _dda(self, np_grid):
-        if self.slope < 1:
-            self._dda_x(np_grid)
+        if self.slope < 1 and self.slope >= 0:
+            self._dda_pos_x(np_grid)
+        elif self.slope > 1:
+            self._dda_pos_y(np_grid)
+        elif self.slope < 0 and self.slope >= -1:
+            self._dda_neg_x(np_grid)
         else:
-            self._dda_y(np_grid)
+            self._dda_neg_y(np_grid)
 
-    def _dda_x(self, np_grid):
+    def _dda_pos_x(self, np_grid):
         y_pos = self.y_1
-        for i in range(self.x_1, self.x_2+1):
+        for i in range(self.x_1, self.x_2):
             if self.slope*(i-self.x_1)-(y_pos-self.y_1) >= 0.5:
                 y_pos += 1
-            np_grid[len(np_grid)-y_pos][i] = self.color
+            np_grid[len(np_grid)-1-y_pos][i] = self.color
 
-    def _dda_y(self, np_grid):
+    def _dda_pos_y(self, np_grid):
         x_pos = self.x_1
-        for i in range(self.y_1, self.y_2+1):
+        for i in range(self.y_1, self.y_2):
             if (i-self.y_1)/self.slope - (x_pos-self.x_1) >= 0.5:
                 x_pos += 1
-            np_grid[len(np_grid)-i][x_pos] = self.color
+            np_grid[len(np_grid)-1-i][x_pos] = self.color
+
+    def _dda_neg_x(self, np_grid):
+        y_pos = self.y_1
+        for i in range(self.x_1, self.x_2):
+            if self.slope*(i-self.x_1)+(y_pos-self.y_1) <= -0.5:
+                y_pos += 1
+            np_grid[len(np_grid)-1-(2*self.y_1-y_pos)][i] = self.color
+
+    def _dda_neg_y(self, np_grid):
+        x_pos = self.x_1
+        for i in range(self.y_1-self.y_2):
+            if i/self.slope + (x_pos-self.x_1) <= -0.5:
+                x_pos += 1
+            np_grid[len(np_grid)-1-(self.y_1-i)][x_pos] = self.color
+
+
     
 
 

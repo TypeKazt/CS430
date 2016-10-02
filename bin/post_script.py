@@ -15,7 +15,12 @@ class PsParser(object):
         """_generate_line(data) -> Line
 
         Private"""
-        return Line(*[int(i) for i in data[:-1]])
+
+        massaged_data = [int(i) for i in data]
+        start = massaged_data[:2]
+        end = massaged_data[2:]
+        massaged_data = min(start, end)+max(start, end)
+        return Line(*massaged_data)
 
     def parse_file(self):
         """parse_file() -> list 
@@ -29,7 +34,7 @@ class PsParser(object):
                     start = not start
                 elif start:
                     data = line.split()
-                    object_list.append(self.functions[data[-1]](data))
+                    object_list.append(self.functions[data[-1]](data[:-1]))
         return object_list
 
 
