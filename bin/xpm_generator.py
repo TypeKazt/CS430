@@ -3,26 +3,27 @@ from colors import Color
 
 
 class XpmGenerator(object):
-    def __init__(self, height, width, colors=[], shapes=[]):
+    def __init__(self, height, width, colors=set(), shapes=[]):
         self.height = height
         self.width = width
-        self.colors = colors
+        self.colors = colors | set([s.color for s in shapes] + [Color.white()])
         self.shapes = shapes
-        self.grid = np.empty((height, width), dtype=Color)
+        self.grid = np.full((height, width), Color.white(), dtype=Color)
         self.xpm_doc = ""
 
     def add_shape(self, shape):
         self.shapes.append(shape)
+        self.add_color(shape.color)
 
     def add_color(self, color):
-        self.colors.append(color)
+        self.colors.add(color)
 
     def generate_xpm(self):
         result = "/*XPM*/\nstatic char *sco100[] = {\n\
                 /* width height num_colors chars_per_pixel */\n"
         result += '"%d %d %d %d",\n' % (self.width, self.height,
                                         len(self.colors),
-                                        max(len(c.id for c in self.colors)))
+                                        max(len(c.id) for c in self.colors))
 
         result += "/* colors */\n"
         for c in self.colors:
@@ -35,7 +36,7 @@ class XpmGenerator(object):
                 result += p.id
             result += '",\n'
         result += '"'
-        for p in self.grid[len(self.grid)]:
+        for p in self.grid[-1]:
             result += p.id
         result += '"\n};'
 

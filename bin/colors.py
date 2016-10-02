@@ -5,7 +5,10 @@ class Color(object):
         self.green = g
         self.blue = b
         self.id = ""
-        self.rgb = [r, g, b]
+        self.rgb = [self.red, self.green, self.blue]
+
+    def __hash__(self):
+        return hash(self.id)
 
     def to_hex(self):
         """to_hex() -> String -- 6 char hex string of color"""
@@ -18,11 +21,27 @@ class Color(object):
             result += temp
         return result
 
-    def black(self):
+    @staticmethod
+    def black():
         return Black()
+
+    @staticmethod
+    def white():
+        return White()
 
 
 class Black(Color):
     def __init__(self):
         super(Black, self).__init__()
         self.id = "x"
+
+
+class White(Color):
+    def __init__(self):
+        super(White, self).__init__()
+        self.id = "-"
+        self.red = 255
+        self.green = 255
+        self.blue = 255
+        self.rgb = [self.red, self.green, self.blue]
+

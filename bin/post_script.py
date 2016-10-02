@@ -22,13 +22,13 @@ class PsParser(object):
         -- Parses a PS file and returns list of Shapes"""
 
         object_list = []
-        with f as open("self.filename"):
+        with open(self.filename) as f:
             start = False
             for line in f:
                 if "%" == line[0]:
                     start = not start
-                if start:
-                    data = f.split()
+                elif start:
+                    data = line.split()
                     object_list.append(self.functions[data[-1]](data))
         return object_list
 
