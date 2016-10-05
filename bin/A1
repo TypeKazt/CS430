@@ -1,0 +1,29 @@
+#!/usr/bin/python
+
+from post_script import *
+from xpm_generator import *
+import sys
+
+ps_file = "hw1.ps"
+if len(sys.argv) > 2:
+    if sys.argv[1] == "-f":
+        ps_file = sys.argv[2]
+    else:
+        print "unrecognized option %s" % sys.argv[1]
+        sys.exit(1)
+
+p = PsParser(filename=ps_file)
+try:
+    sp = p.parse_file()
+except IOError:
+    print "cannot find file %s" % ps_file
+    sys.exit(1)
+except:
+    print "PS file format incorrect"
+    sys.exit(1)
+
+    
+xp = XpmGenerator(500, 500, shapes=sp)
+xp.generate_xpm()
+sys.stdout.write(xp.xpm_doc)
+

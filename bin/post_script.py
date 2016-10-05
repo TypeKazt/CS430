@@ -27,7 +27,7 @@ class PsParser(object):
         -- Parses a PS file and returns list of Shapes"""
 
         object_list = []
-        with open(self.filename) as f:
+        with open(self.filename, "r") as f:
             start = False
             for line in f:
                 if "%" == line[0]:
