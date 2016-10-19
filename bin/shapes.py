@@ -7,6 +7,9 @@ class Point2D(object):
         self.x = x
         self.y = y
 
+    def coor(self):
+        return [self.x, self.y]
+
     def __eq__(self, other):
         if self.x == other.x:
             if self.y == other.y:
@@ -15,6 +18,12 @@ class Point2D(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def __gt__(self, other):
+        return self.x > other.x
+
+    def __lt__(self, other):
+        return self.x < other.x
 
     def __sub__(self, other):
         return Vector2D(self.x-other.x,
@@ -105,22 +114,16 @@ class Line(Shape):
 
         self._cohen_sutherland(len(np_grid), len(np_grid[0]))
         if self.rasterable:
-            print self.p1, self.p2
-            print self.slope
             self._dda(np_grid)
 
     def _dda(self, np_grid):
         if self.slope <= 1 and self.slope >= 0:
-            print 1
             self._dda_pos_x(np_grid)
         elif self.slope > 1:
-            print 2
             self._dda_pos_y(np_grid)
         elif self.slope < 0 and self.slope >= -1:
-            print 3
             self._dda_neg_x(np_grid)
         else:
-            print 4
             self._dda_neg_y(np_grid)
 
     def _dda_pos_x(self, np_grid):
@@ -236,7 +239,6 @@ class Line(Shape):
             t = 0
             if P_type != 0:
                 t = (Ni*(self.p1-Point2D(0, 0)))/-P_type
-                print t
             if t > max_le:
                 max_le = t
 
@@ -246,7 +248,6 @@ class Line(Shape):
             t = 1
             if P_type != 0:
                 t = (Ni*(self.p1-Point2D(width, height*Ni.y)))/-(Ni*D)
-                print t
             if t < min_te:
                 min_te = t
 
@@ -255,26 +256,25 @@ class Line(Shape):
 
         self.p1 = self.parametric_line(max_le)
         self.p2 = self.parametric_line(min_te)
-        print max_le, min_te
 
         self.p1 = Point2D(int(round(self.p1.x)), int(round(self.p1.y)))
         self.p2 = Point2D(int(round(self.p2.x)), int(round(self.p2.y)))
-        print self.p1, self.p2
-        
 
 
-        
-            
-            
+class Polygon(Shape):
+    def __init__(self, start_point=None):
+        super(Polygon, self).__init__()
+        self.start_point = start_point
+        self.line_stack = []
 
-         
-        
-        
+    def add_line(self, line):
+        self.line_stack.append(line)
 
+    def _sutherland_hodgman(self, width, height):
+        pass
 
-
-
-
-    
-
-
+    def raster(self, np_grid):
+        self._sutherland_hodgman(len(np_grid), len(np_grid[0]))
+        for line in self.line_stack:
+            print str(line)
+            line.raster(np_grid)
