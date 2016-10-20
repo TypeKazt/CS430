@@ -20,10 +20,12 @@ class Point2D(object):
         return not self == other
 
     def __gt__(self, other):
-        return self.x > other.x
+        if self.x != other.x:
+            return self.x > other.x
+        return self.y > other.y
 
     def __lt__(self, other):
-        return self.x < other.x
+        return not self > other        
 
     def __sub__(self, other):
         return Vector2D(self.x-other.x,
@@ -266,15 +268,63 @@ class Polygon(Shape):
         super(Polygon, self).__init__()
         self.start_point = start_point
         self.line_stack = []
+        self.point_stack = []
+        if start_point is not None:
+            self.point_stack = [start_point]
 
     def add_line(self, line):
         self.line_stack.append(line)
 
-    def _sutherland_hodgman(self, width, height):
-        pass
+    def add_point(self, point):
+        self.point_stack.append(point)
+
+    def _sutherland_hodgman(self, clipPolygon):
+        def inside(point):
+            return(cp2.x-cp1.x)*(point.y-cp1.y) > (cp2.y-cp1.y)*(point.x-cp1.x)
+
+        def compute_intersection():
+            dc = [cp1.x - cp2.x, cp1.y - cp2.y]
+            dp = [s.x - e.x, s.y - e.y]
+            n1 = cp1.x * cp2.y - cp1.y * cp2.x
+            n2 = s.x * e.y - s.y * e.x
+            n3 = 1.0 / (dc[0] * dp[1] - dc[1] * dp[0])
+            return [(n1*dp[0] - n2*dc[0]) * n3, (n1*dp[1] - n2*dc[1]) * n3]
+
+        out_points = self.point_stack
+        cp1 = clipPolygon.point_stack[-1]
+
+        for c_vertex in clipPolygon.point_stack[1:]:
+            cp2 = c_vertex
+            in_points = out_points
+            out_points = []
+            if in_points == []:
+                self.point_stack = []
+                break
+            s = in_points[-1]
+            for s_vertex in in_points:
+                e = s_vertex
+                if inside(e):
+                    if not inside(s):
+                        out_points.append(Point2D(*compute_intersection()))
+                    out_points.append(e)
+                elif inside(s):
+                    out_points.append(Point2D(*compute_intersection()))
+                s = e
+            cp1 = cp2
+
+        self.point_stack = out_points
 
     def raster(self, np_grid):
-        self._sutherland_hodgman(len(np_grid), len(np_grid[0]))
-        for line in self.line_stack:
-            print str(line)
+        frame_buffer_poly = Polygon(Point2D(0, 0))
+        frame_buffer_poly.add_point(Point2D(500, 0))
+        frame_buffer_poly.add_point(Point2D(500, 500))
+        frame_buffer_poly.add_point(Point2D(0, 500))
+        frame_buffer_poly.add_point(Point2D(0, 0))
+        self._sutherland_hodgman(frame_buffer_poly)
+        line_stack = []
+        for i in range(len(self.point_stack)-1):
+            p1 = self.point_stack[0+i]
+            p2 = self.point_stack[1+i]
+            line_stack.append(Line(*min(p1, p2).coor()+max(p1, p2).coor()))
+        for line in line_stack:
             line.raster(np_grid)
