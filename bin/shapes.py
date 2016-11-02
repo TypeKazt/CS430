@@ -98,6 +98,55 @@ class Line(Shape):
     def __str__(self):
         return "P1:" + str(self.p1) + " P2:" + str(self.p2)
 
+    def __and__(self, other):
+        # and used to check whether lines intersect
+        def orientation(p, q, r):
+            val = (q.y - p.y) * (r.x - q.x) -\
+                  (q.x - p.x) * (r.y - q.y)
+
+            if val == 0:
+                return 0
+            elif val > 0:
+                return 1
+            return 2
+
+        def on_segment(p, q, r):
+            if q.x <= max(p.x, r.x) \
+               and q.x >= min(p.x, r.x)\
+               and q.y <= max(p.y, r.y) \
+               and q.y >= min(p.y, r.y):
+                return True
+            return False
+
+        def do_intersect(other):
+            o1 = orientation(self.p1, self.p2, other.p1)
+            o2 = orientation(self.p1, self.p2, other.p2)
+            o3 = orientation(other.p1, other.p2, self.p1)
+            o4 = orientation(other.p1, other.p2, self.p2)
+
+            # general case
+            if o1 != o2 and o3 != o4:
+                return True
+            
+            # p1, q1 and p2 are colinear and p2 lies on segment p1q1
+            if (o1 == 0 and on_segment(self.p1, other.p1, self.p2)): 
+                return True
+                  
+            # p1, q1 and p2 are colinear and q2 lies on segment p1q1
+            if (o2 == 0 and on_segment(self.p1, other.p2, self.p2)):
+                return True
+                           
+            # p2, q2 and p1 are colinear and p1 lies on segment p2q2
+            if (o3 == 0 and on_segment(other.p1, self.p1, other.p2)):
+                return True
+                                    
+            # p2, q2 and q1 are colinear and q1 lies on segment p2q2
+            if (o4 == 0 and on_segment(other.p2, self.p1, other.p2)):
+                return True
+
+            return False
+        return do_intersect(other)
+
     def _set_max_coor(self):
         self.max_x = self.x_2
         self.max_y = self.y_2
@@ -228,7 +277,11 @@ class Line(Shape):
                     end_code = self._compute_bounds_code(height, width)[1]
 
     def parametric_line(self, t):
-        return self.p1 + (self.p2-self.p1)*t
+        def get_y(p):
+            return p.y
+        start_p = min(self.p1, self.p2, key=get_y)
+        end_p = max(self.p1, self.p2, key=get_y)
+        return start_p + (end_p-start_p)*t
         
     def _cyrus_beck(self, width, height):
         D = self.p2 - self.p1
@@ -314,6 +367,48 @@ class Polygon(Shape):
 
         self.point_stack = out_points
 
+    def fill(self, np_grid):
+        def get_y(p):
+            return p.y
+
+        start_y = int(round(min(self.point_stack, key=get_y).y))
+        end_y = int(round(max(self.point_stack, key=get_y).y))
+        scan_line = Line(0, start_y, len(np_grid)-1, start_y) 
+        line_stack = []
+        
+        for i in range(start_y, end_y):
+            hit_points = []
+            scan_line.p1.y = i
+            scan_line.p2.y = i
+            hit_lines = []
+            for line in self.line_stack:
+                if line & scan_line:
+                    hit_lines.append(line)
+                    dy = abs(line.p1.y - line.p2.y)
+                    if dy != 0:
+                        if scan_line.p1.y != max(line.p1.y, line.p2.y):
+                            inter = line.parametric_line((dy-(
+                            max(line.p1.y, line.p2.y)-scan_line.p1.y))/float(dy))
+                            hit_points.append(inter)
+            line_points = []
+            hit_points = sorted(hit_points)
+            for hp in range(len(hit_points)):
+                line_points.append(hit_points[hp])
+                if len(line_points) > 1:
+                    start = min(line_points)
+                    end = max(line_points)
+                    line_stack.append(Line(int(round(start.x)),
+                                           int(round(start.y)),
+                                           int(round(end.x)),
+                                           int(round(end.y))))
+                    line_points = []
+
+            if line_points != []:
+                line_stack.append(Line(int(round(line_points[0].x)), int(round(line_points[0].y)),
+                                       len(np_grid)-1, int(round(line_points[0].y))))
+
+        self.line_stack += line_stack
+
     def raster(self, np_grid):
         frame_buffer_poly = Polygon(Point2D(0, 0))
         frame_buffer_poly.add_point(Point2D(500, 0))
@@ -323,8 +418,14 @@ class Polygon(Shape):
         self._sutherland_hodgman(frame_buffer_poly)
         line_stack = []
         for i in range(len(self.point_stack)-1):
+            # generates all lines to be drawn
             p1 = self.point_stack[0+i]
             p2 = self.point_stack[1+i]
             line_stack.append(Line(*min(p1, p2).coor()+max(p1, p2).coor()))
-        for line in line_stack:
+
+        self.line_stack = line_stack
+        self.fill(np_grid)
+
+        for line in self.line_stack:
+            # draws lines
             line.raster(np_grid)
