@@ -6,9 +6,13 @@ class Point2D(object):
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
+        self.hcoor = 1
 
     def coor(self):
-        return [self.x, self.y]
+        return [self.x, self.y, self.hcoor]
+
+    def set_coor(self, x, y, hcoor):
+        self.x, self.y, self.hcoor = x, y, hcoor
 
     def __eq__(self, other):
         if self.x == other.x:
@@ -65,7 +69,7 @@ class Shape(object):
     """Parent Shape object"""
     def __init__(self):
         self.color = Black()
-        self.width = 1
+        self.max_x = 1
         self.max_x = 1
         self.max_y = 1
         self.rasterable = True
@@ -80,6 +84,9 @@ class Shape(object):
         pass
 
     def raster(self, np_grid):
+        pass
+
+    def clip(self, min_x, min_y, max_x, max_y):
         pass
 
 
@@ -161,9 +168,8 @@ class Line(Shape):
         self.x_1, self.y_1, self.x_2, self.y_2 = \
                 x_1, y_1, x_2, y_2
     
-    def raster(self, np_grid, algo=0):
-
-        self._cohen_sutherland(len(np_grid), len(np_grid[0]))
+    def raster(self, np_grid):
+        self.clip(0, 0, len(np_grid), len(np_grid[0]))
         if self.rasterable:
             self._dda(np_grid)
 
@@ -205,35 +211,36 @@ class Line(Shape):
                 x_pos += 1
             np_grid[len(np_grid)-1-(self.p1.y-i)][x_pos] = self.color
 
-    def _compute_bounds_code(self, height, width):
+    def _compute_bounds_code(self, min_x, min_y, max_x, max_y):
         inside, left, right, bottom, top = \
         0, 1, 2, 4, 8
 
         start_code = inside
         end_code = inside
 
-        if self.p1.x < 0:
+        if self.p1.x < min_x:
             start_code |= left
-        elif self.p1.x >= width:
+        elif self.p1.x >= max_x:
             start_code |= right
-        if self.p1.y < 0:
+        if self.p1.y < min_y:
             start_code |= bottom
-        elif self.p1.y >= height:
+        elif self.p1.y >= max_y:
             start_code |= top
 
-        if self.p2.x < 0:
+        if self.p2.x < min_x:
             end_code |= left
-        elif self.p2.x >= width:
+        elif self.p2.x >= max_x:
             end_code |= right
-        if self.p2.y < 0:
+        if self.p2.y < min_y:
             end_code |= bottom
-        elif self.p2.y >= height:
+        elif self.p2.y >= max_y:
             end_code |= top
 
         return [start_code, end_code]
 
-    def _cohen_sutherland(self, height, width):
-        start_code, end_code = self._compute_bounds_code(height, width)
+    def _cohen_sutherland(self, min_x, min_y, max_x, max_y):
+        start_code, end_code = self._compute_bounds_code(min_x, min_y, 
+                                                         max_x, max_y)
         self.rasterable = False
         inside, left, right, bottom, top = \
         0, 1, 2, 4, 8
@@ -250,31 +257,36 @@ class Line(Shape):
 
                 if outcode & top:
                     x = self.p1.x + (self.p2.x - self.p1.x) * \
-                            (height - 1 - self.p1.y) / (self.p2.y - self.p1.y)
-                    y = height-1
+                            (max_y - 1 - self.p1.y) / (self.p2.y - self.p1.y)
+                    y = max_y-1
                 elif outcode & bottom:
                     x = self.p1.x + (self.p2.x - self.p1.x) * \
-                            (0 - self.p1.y) / (self.p2.y - self.p1.y)
-                    y = 0
+                            (min_y - self.p1.y) / (self.p2.y - self.p1.y)
+                    y = min_y
                 elif outcode & right:
                     y = self.p1.y + (self.p2.y - self.p1.y) * \
-                            (width - 1 - self.p1.x) / (self.p2.x - self.p1.x)
-                    x = width-1
+                            (max_x - 1 - self.p1.x) / (self.p2.x - self.p1.x)
+                    x = max_x-1
                 elif outcode & left:
                     y = self.p1.y + (self.p2.y - self.p1.y) * \
-                            (0 - self.p1.x) / (self.p2.x - self.p1.x)
-                    x = 0
+                            (min_x - self.p1.x) / (self.p2.x - self.p1.x)
+                    x = min_x
                 else:
                     raise Exception("Undefined clipping state")
 
                 if outcode == start_code:
                     self.p1.x = int(round(x))
                     self.p1.y = int(round(y))
-                    start_code = self._compute_bounds_code(height, width)[0]
+                    start_code = self._compute_bounds_code(min_x, min_y,
+                                                           max_x, max_y)[0]
                 else:
                     self.p2.x = int(round(x))
                     self.p2.y = int(round(y))
-                    end_code = self._compute_bounds_code(height, width)[1]
+                    end_code = self._compute_bounds_code(min_x, min_y,
+                                                         max_x, max_y)[1]
+
+    def clip(self, min_x, min_y, max_x, max_y):
+        self._cohen_sutherland(min_x, min_y, max_x, max_y)
 
     def parametric_line(self, t):
         def get_y(p):
@@ -283,7 +295,7 @@ class Line(Shape):
         end_p = max(self.p1, self.p2, key=get_y)
         return start_p + (end_p-start_p)*t
         
-    def _cyrus_beck(self, width, height):
+    def _cyrus_beck(self, max_x, max_y):
         D = self.p2 - self.p1
         Nl, Nt, Nr, Nb = Vector2D(-1, 0), Vector2D(0, 1), \
             Vector2D(1, 0), Vector2D(0, -1)
@@ -302,7 +314,7 @@ class Line(Shape):
             P_type = Ni*D
             t = 1
             if P_type != 0:
-                t = (Ni*(self.p1-Point2D(width, height*Ni.y)))/-(Ni*D)
+                t = (Ni*(self.p1-Point2D(max_x, max_y*Ni.y)))/-(Ni*D)
             if t < min_te:
                 min_te = t
 
@@ -331,7 +343,10 @@ class Polygon(Shape):
     def add_point(self, point):
         self.point_stack.append(point)
 
-    def _sutherland_hodgman(self, clipPolygon):
+    def get_coor(self):
+        return self.point_stack
+
+    def sutherland_hodgman(self, clipPolygon):
         def inside(point):
             return(cp2.x-cp1.x)*(point.y-cp1.y) > (cp2.y-cp1.y)*(point.x-cp1.x)
 
@@ -367,15 +382,22 @@ class Polygon(Shape):
 
         self.point_stack = out_points
 
+    def clip(self, min_x, min_y, max_x, max_y):
+        frame_buffer_poly = Polygon(Point2D(min_x, min_y))
+        frame_buffer_poly.add_point(Point2D(max_x, min_y))
+        frame_buffer_poly.add_point(Point2D(max_x, max_y))
+        frame_buffer_poly.add_point(Point2D(min_x, max_y))
+        frame_buffer_poly.add_point(Point2D(min_x, min_y))
+        self.sutherland_hodgman(frame_buffer_poly)
+
     def fill(self, np_grid):
         def get_y(p):
             return p.y
 
         start_y = int(round(min(self.point_stack, key=get_y).y))
         end_y = int(round(max(self.point_stack, key=get_y).y))
-        scan_line = Line(0, start_y, len(np_grid)-1, start_y) 
+        scan_line = Line(-1, start_y, len(np_grid)-1, start_y) 
         line_stack = []
-        
         for i in range(start_y, end_y):
             hit_points = []
             scan_line.p1.y = i
@@ -408,23 +430,20 @@ class Polygon(Shape):
                                        len(np_grid)-1, int(round(line_points[0].y))))
 
         self.line_stack += line_stack
+        
 
     def raster(self, np_grid):
-        frame_buffer_poly = Polygon(Point2D(0, 0))
-        frame_buffer_poly.add_point(Point2D(500, 0))
-        frame_buffer_poly.add_point(Point2D(500, 500))
-        frame_buffer_poly.add_point(Point2D(0, 500))
-        frame_buffer_poly.add_point(Point2D(0, 0))
-        self._sutherland_hodgman(frame_buffer_poly)
+        self.clip(0, 0, len(np_grid), len(np_grid[0]))
         line_stack = []
-        for i in range(len(self.point_stack)-1):
+        for i in range(len(self.point_stack)):
             # generates all lines to be drawn
-            p1 = self.point_stack[0+i]
-            p2 = self.point_stack[1+i]
-            line_stack.append(Line(*min(p1, p2).coor()+max(p1, p2).coor()))
+            p1 = self.point_stack[i]
+            p2 = self.point_stack[(1+i)%len(self.point_stack)]
+            line_stack.append(Line(*[int(round(v)) for v in min(p1, p2).coor()[:-1]+max(p1, p2).coor()[:-1]]))
 
         self.line_stack = line_stack
-        self.fill(np_grid)
+        if self.point_stack != []:
+            self.fill(np_grid)
 
         for line in self.line_stack:
             # draws lines

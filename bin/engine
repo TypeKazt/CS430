@@ -2,15 +2,77 @@
 
 from post_script import *
 from xpm_generator import *
+from transforms import *
 import sys
+import argparse
+
+parser = argparse.ArgumentParser()
+
+u_max, u_min, v_max, v_min = (499, 0, 499, 0)
+x_max, x_min, y_max, y_min = (499, 0, 499, 0)
 
 ps_file = "hw1.ps"
-if len(sys.argv) > 2:
-    if sys.argv[1] == "-f":
-        ps_file = sys.argv[2]
-    else:
-        print "unrecognized option %s" % sys.argv[1]
-        sys.exit(1)
+scale_f = 1.0
+rotate_val = 0
+trans_x = 0
+trans_y = 0
+
+parser.add_argument('-f', action='store', dest="ps_file", 
+                    help='Post sctipt file parsed', type=str,
+                    default="hw5_1.ps")
+parser.add_argument('-s', action='store', dest="scale", 
+                    help='Scale factor', type=float,
+                    default=1.0)
+parser.add_argument('-r', action='store', dest="rotation", 
+                    help='Rotation angle', type=int,
+                    default=0)
+parser.add_argument('-m', action='store', dest="trans_x", 
+                    help='Translation on x axis', type=int,
+                    default=0)
+parser.add_argument('-n', action='store', dest="trans_y", 
+                    help='Translation on y axis', type=int,
+                    default=0)
+parser.add_argument('-a', action='store', dest="x_min", 
+                    help='World x lower bound', type=int,
+                    default=0)
+parser.add_argument('-b', action='store', dest="y_min", 
+                    help='World y lower bound', type=int,
+                    default=0)
+parser.add_argument('-c', action='store', dest="x_max", 
+                    help='World x upper bound', type=int,
+                    default=500)
+parser.add_argument('-d', action='store', dest="y_max", 
+                    help='World y upper bound', type=int,
+                    default=500)
+parser.add_argument('-j', action='store', dest="u_min", 
+                    help='Viewport x lower bound', type=int,
+                    default=0)
+parser.add_argument('-k', action='store', dest="v_min", 
+                    help='Viewport y lower bound', type=int,
+                    default=0)
+parser.add_argument('-o', action='store', dest="u_max", 
+                    help='Viewport x upper bound', type=int,
+                    default=500)
+parser.add_argument('-p', action='store', dest="v_max", 
+                    help='Viewport y upper bound', type=int,
+                    default=500)
+
+args = parser.parse_args()
+ps_file = args.ps_file
+scale_f = args.scale
+rotate_val = args.rotation
+trans_x = args.trans_x
+trans_y = args.trans_y
+x_min = args.x_min
+x_max = args.x_max
+y_min = args.y_min
+y_max = args.y_max
+u_min = args.u_min
+u_max = args.u_max
+v_min = args.v_min
+v_max = args.v_max
+
+world_origin = Point2D(x_min, y_min)
 
 p = PsParser(filename=ps_file)
 try:
@@ -21,6 +83,22 @@ except IOError:
 except:
     print "PS file format incorrect"
     sys.exit(1)
+for shape in sp:
+    # first transform within world
+    translate(trans_x, trans_y, shape)
+    scale(scale_f, scale_f, world_origin, shape)
+    rotate(rotate_val, world_origin, shape)
+    shape.clip(x_min, y_min, x_max+1, y_max+1)
+    # next transform into view
+    if shape.get_coor() != []:
+        translate(-x_min, -y_min, shape)
+        scale(float(u_max-u_min)/float(x_max-x_min), 
+             float(v_max-v_min)/float(y_max-y_min),
+            world_origin, shape)
+        translate(u_min, v_min, shape)
+
+
+    
 
     
 xp = XpmGenerator(500, 500, shapes=sp)
