@@ -5,6 +5,7 @@ from xpm_generator import *
 from transforms import *
 import sys
 import argparse
+from space_points import Point2D
 
 parser = argparse.ArgumentParser()
 

@@ -1,5 +1,6 @@
 from shapes import *
 from colors import *
+from space_points import Point2D
 
 
 class PsParser(object):
