@@ -1,0 +1,173 @@
+#!/usr/bin/python
+
+import sys
+from smf_parser import *
+from xpm_generator import *
+from transforms3D import *
+import transforms2D as t2d
+import argparse
+from space_points import Point3D, Point2D
+from shapes import Polygon
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-f', action='store', dest="smf_file", 
+                    help='SMF file parsed', type=str)
+parser.add_argument('-j', action='store', dest="vpx_low", 
+                    help='View port x low', type=int,
+                    default=0)
+parser.add_argument('-k', action='store', dest="vpy_low", 
+                    help='View port y low', type=int,
+                    default=0)
+parser.add_argument('-o', action='store', dest="vpx_high", 
+                    help='View port x high', type=int,
+                    default=499)
+parser.add_argument('-p', action='store', dest="vpy_high", 
+                    help='View port y high', type=int,
+                    default=499)
+parser.add_argument('-x', action='store', dest="prp_x", 
+                    help='PRP x val', type=float,
+                    default=0.0)
+parser.add_argument('-y', action='store', dest="prp_y", 
+                    help='PRP y val', type=float,
+                    default=0.0)
+parser.add_argument('-z', action='store', dest="prp_z", 
+                    help='PRP z val', type=float,
+                    default=1.0)
+parser.add_argument('-X', action='store', dest="vrp_x", 
+                    help='VRP x val', type=float,
+                    default=0.0)
+parser.add_argument('-Y', action='store', dest="vrp_y", 
+                    help='VRP y val', type=float,
+                    default=0.0)
+parser.add_argument('-Z', action='store', dest="vrp_z", 
+                    help='VRP z val', type=float,
+                    default=0.0)
+parser.add_argument('-q', action='store', dest="vpn_x", 
+                    help='VPN x val', type=float,
+                    default=0.0)
+parser.add_argument('-r', action='store', dest="vpn_y", 
+                    help='VPN y val', type=float,
+                    default=0.0)
+parser.add_argument('-w', action='store', dest="vpn_z", 
+                    help='VPN z val', type=float,
+                    default=-1.0)
+parser.add_argument('-Q', action='store', dest="vup_x", 
+                    help='VUP x val', type=float,
+                    default=0.0)
+parser.add_argument('-R', action='store', dest="vup_y", 
+                    help='VUP y val', type=float,
+                    default=1.0)
+parser.add_argument('-W', action='store', dest="vup_z", 
+                    help='VUP z val', type=float,
+                    default=0.0)
+parser.add_argument('-u', action='store', dest="vrc_x_min", 
+                    help='VRC x min val', type=float,
+                    default=-0.7)
+parser.add_argument('-v', action='store', dest="vrc_y_min", 
+                    help='VRC y min val', type=float,
+                    default=-0.7)
+parser.add_argument('-U', action='store', dest="vrc_x_max", 
+                    help='VRC x max val', type=float,
+                    default=0.7)
+parser.add_argument('-V', action='store', dest="vrc_y_max", 
+                    help='VRC y max val', type=float,
+                    default=0.7)
+parser.add_argument('-P', dest="parallel", action='store_true',
+                    help='Indicates parallel or perspective')
+
+args = parser.parse_args()
+
+vpx_min, vpy_min, vpx_max, vpy_max = args.vpx_low, args.vpy_low, \
+                                     args.vpx_high, args.vpy_high
+prp_x, prp_y, prp_z = args.prp_x, args.prp_y, args.prp_z
+vrp_x, vrp_y, vrp_z = args.vrp_x, args.vrp_y, args.vrp_z
+vpn_x, vpn_y, vpn_z = args.vpn_x, args.vpn_y, args.vpn_z
+vup_x, vup_y, vup_z = args.vup_x, args.vup_y, args.vup_z
+vrc_x_min, vrc_y_min, vrc_x_max, vrc_y_max = args.vrc_y_min, args.vrc_y_min,\
+                                             args.vrc_x_max, args.vrc_y_max
+parallel = args.parallel
+front, back = 0.6, -0.6
+
+vrp = [vrp_x, vrp_y, vrp_z]
+n = [vpn_x, vpn_y, vpn_z]
+u = np.cross([vup_x, vup_y, vup_z], n)
+n = np.divide(n, np.linalg.norm(n))
+u = np.divide(u, np.linalg.norm(u))
+v = np.cross(n, u)
+
+tmat = translation_matrix(-vrp_x, -vrp_y, -vrp_z)
+rmat = camera_rotate_mat(u, v, n)
+
+m_view = rmat * tmat
+m_proj = None
+
+if parallel:
+    m_proj = np.matrix([[2.0/(vrc_x_max-vrc_x_min), 0, float((vrc_x_max + vrc_x_min) - 2*prp_x)/\
+                      ((vrc_x_max - vrc_x_min)*prp_z), -(vrc_x_max + vrc_x_min)/2.0],
+                      [0, 2.0/(vrc_y_max - vrc_y_min), float((vrc_y_max + vrc_y_min) - 2*prp_y)/\
+                      ((vrc_y_max - vrc_y_min)*prp_z), -(vrc_y_max + vrc_y_min)/2.0],
+                      [0, 0, 1.0/(front - back), -front/(front - back)],
+                      [0, 0, 0, 1]],
+                      dtype=np.float_)
+else:
+    m_proj = np.matrix([[2.0*prp_z/((vrc_x_max-vrc_x_min)*(prp_z-back)), 0, \
+                        ((vrc_x_max+vrc_x_min) - 2.0*prp_x)/((vrc_x_max-vrc_x_min)*(prp_z-back)), \
+                        -(vrc_x_max+vrc_x_min)*prp_z/((vrc_x_max-vrc_x_min)*(prp_z-back))],
+
+                        [0, 2.0*prp_z/((vrc_y_max-vrc_y_min)*(prp_z-back)), \
+                        ((vrc_y_max+vrc_y_min) - 2.0*prp_y)/((vrc_y_max-vrc_y_min)*(prp_z-back)),\
+                        -(vrc_y_max+vrc_y_min)*prp_z/((vrc_y_max-vrc_y_min)*(prp_z-back))],
+
+                        [0, 0, 1.0/(prp_z-back), -prp_z/(prp_z-back)],
+
+                        [0, 0, 0, 1]],
+                        dtype=np.float_)
+
+m_pv = m_proj*m_view
+print m_view
+print m_proj
+
+
+file_parser = SMFParser(args.smf_file)
+verts = []
+faces = []
+
+try:
+    verts, faces = file_parser.parse()
+except IOError:
+    print "Could not find file " + file_parser.filename
+    exit(1)
+
+for point in file_parser.vertices:
+    temp = m_pv * np.matrix([[point.x], [point.y], [point.z], [1]], dtype=np.float_)
+    temp = temp.reshape(4, 1).tolist()
+    point.set_coor(*[i[0] for i in temp[:-1]])
+
+# need to clip
+
+polygons = []
+for face in faces:
+    count = 0
+    face.clip(0, parallel)
+    if face.raster:
+        for point in face.points:
+            if parallel:
+                face.points[count] = Point2D(point.x, point.y)
+            else:
+                face.points[count] = Point2D(point.x/(-point.z), point.y/(-point.z))
+            count += 1
+
+for face in faces:
+    if face.raster:
+        poly = Polygon()
+        poly.point_stack = face.points
+        t2d.translate(1, 1, poly)
+        t2d.scale((vpx_max-vpx_min)/2.0, (vpy_max-vpy_min)/2.0, poly)
+        t2d.translate(vpx_min, vpy_min, poly)
+        polygons.append(poly)
+
+xp = XpmGenerator(500, 500, shapes=polygons)
+xp.generate_xpm()
+sys.stdout.write(xp.xpm_doc)

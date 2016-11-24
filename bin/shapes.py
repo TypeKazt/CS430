@@ -275,6 +275,12 @@ class Polygon(Shape):
         if start_point is not None:
             self.point_stack = [start_point]
 
+    def __str__(self):
+        s = ""
+        for p in self.point_stack:
+            s += str(p) + "\n"
+        return s
+
     def add_line(self, line):
         self.line_stack.append(line)
 
@@ -381,7 +387,8 @@ class Polygon(Shape):
 
         self.line_stack = line_stack
         if self.point_stack != []:
-            self.fill(np_grid)
+            #self.fill(np_grid)
+            pass
 
         for line in self.line_stack:
             # draws lines

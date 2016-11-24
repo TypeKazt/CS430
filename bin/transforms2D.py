@@ -14,20 +14,16 @@ def translate(dx, dy, shape):
     return shape
 
 
-def scale(x_factor, y_factor, opoint, shape):
+def scale(x_factor, y_factor, shape):
     scale_matrix = np.matrix([[x_factor, 0, 0],
                              [0, y_factor, 0],
                              [0, 0, 1]],
                              dtype=np.float_)
     verts = shape.get_coor()
-    dx = verts[0].x-opoint.x
-    dy = verts[0].y-opoint.y
-#    translate(-dx, -dy, shape)
     for point in verts:
         point.set_coor(*[z[0] for z in (scale_matrix *
                          np.matrix(point.coor(), 
                          dtype=np.float_).reshape(3, 1)).tolist()])
- #   translate(dx, dy, shape)
     return shape
 
 
@@ -40,8 +36,6 @@ def rotate(angle, opoint, shape):
                               [0, 0, 1]],
                               dtype=np.float_)
     verts = shape.get_coor()
-    dx = verts[0].x-opoint.x
-    dy = verts[0].y-opoint.y
     for point in verts:
         point.set_coor(*[z[0] for z in (rotate_matrix *
                          np.matrix(point.coor(),

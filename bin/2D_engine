@@ -2,7 +2,7 @@
 
 from post_script import *
 from xpm_generator import *
-from transforms import *
+from transforms2D import *
 import sys
 import argparse
 from space_points import Point2D
