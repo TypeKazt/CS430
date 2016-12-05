@@ -7,7 +7,7 @@ class XpmGenerator(object):
         self.height = height
         self.width = width
         self.grid = np.full((height, width), Color.white(), dtype=Color)
-        self.colors = colors | set([s.color for s in shapes] + [Color.white()])
+        self.colors = colors | set([s.color for s in shapes] + [Color.black()])
         self.shapes = []
         for i in shapes:
             self.add_shape(i)

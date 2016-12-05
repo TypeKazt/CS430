@@ -133,14 +133,15 @@ class Face3D(object):
     def get_coor(self):
         return self.points
 
-    def clip(self, plane, para=False):
+    def clip(self, xmin, ymin, zmin, xmax, ymax, zmax, para=False):
         if para:
-            self._thresh_clip(-1, 1, -1, 1, -1, 0)
+        #    self._thresh_clip(-1, 1, -1, 1, -1, 0)
+            pass
         else:
-            #self._thresh_clip
+            #self._thresh_clip(xmin, ymin, zmin, xmax, ymax, zmax)
             pass
 
-    def _thresh_clip(self, x_min, x_max, y_min, y_max, z_min, z_max):
+    def _thresh_clip(self, xmin, ymin, zmin, xmax, ymax, zmax):
         """ _thresh_clip(plane) -> None
 
         plane - Face3D clipping plane
@@ -148,13 +149,16 @@ class Face3D(object):
         Private"""
 
         for p in self.points:
-            if p.y > y_max or p.y < y_min:
+            if p.y > ymax or p.y < ymin:
+                print p, 1
                 self.raster = False
                 break
-            elif p.x > x_max or p.x < x_min:
+            elif p.x > xmax or p.x < xmin:
+                print p, 2
                 self.raster = False
                 break
-            elif p.z > z_max or p.z < z_min:
+            elif p.z > zmax or p.z < zmin:
+                print p, 3
                 self.raster = False
                 break
 
