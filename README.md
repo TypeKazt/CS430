@@ -1,5 +1,14 @@
-Features: parses PS files, draws lines into XPM, clips lines, draws polygons, clips polygons, fills polygons, performs various transforms
+Features
+========
+
+-	Parses PS files
+-	Draws lines into XPM
+-	Clips lines
+-	Draws polygons
+-	Clips polygons
+-	Fills polygons
+-	Performs various 2D and 3D transforms
+-	Contains a 2D and 3D engine
+
+
 Language and OS: Python 2.7.11 on Ubuntu 16.04
-Interpreter: Python 2.7.11
-Main: engine is the main script
-Compile: No compilation needed
